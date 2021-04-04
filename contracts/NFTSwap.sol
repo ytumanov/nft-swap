@@ -11,7 +11,7 @@ contract NFTSwap is Ownable {
         IERC1155 nftToken;
         address payable seller;
         uint128 price;
-        uint32 nftId;
+        uint64 nftId;
         uint32 value;
     }
 
@@ -26,12 +26,11 @@ contract NFTSwap is Ownable {
 
 
     // Before send adding order seller should call once _nftToken.setApprovalForAll(nftswap.address, true)
-    function addOrder(IERC1155 _nftToken, uint32 _nftId, uint32 _value, uint128 _price) external returns (uint) {
+    function addOrder(IERC1155 _nftToken, uint64 _nftId, uint32 _value, uint128 _price) external returns (uint) {
         require(_value > 0, "NFT value can't be 0");
         require(_price > 0, "Price can't be 0");
 
-        uint id = orderId;
-        orderId++;
+        uint id = orderId++;
         orders[id] = Order({
                         nftToken: _nftToken,
                         seller: _msgSender(),
@@ -45,13 +44,13 @@ contract NFTSwap is Ownable {
     }
 
     function swap(uint _id) external payable {
-        Order storage order = orders[_id];
+        Order memory order = orders[_id];
         uint _fee = order.price * fee / 1000;
         require(order.value > 0, "Not valid order id provided");
         require(msg.value >= order.price + _fee, "Not enough ETH for NFT swap");
 
+        delete orders[_id];
         IERC1155(order.nftToken).safeTransferFrom(order.seller, _msgSender(), order.nftId, order.value, '');
-        order.value = 0;
         order.seller.transfer(order.price);
 
         emit OrderExecuted(_id, _msgSender());
